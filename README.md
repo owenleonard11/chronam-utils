@@ -1,0 +1,2 @@
+# Generating Chronicling America
+This repository contains notebooks and scripts for interacting with the [Chronicling America](https://chroniclingamerica.loc.gov/) database of historical newspapers, in support of an upcoming project on post-OCR correction and retrieval-augmented generation.
