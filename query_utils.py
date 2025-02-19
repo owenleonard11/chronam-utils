@@ -4,10 +4,12 @@ from urllib.parse import quote, quote_plus, unquote, unquote_plus
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
+
 SEARCH_URL_BASE = 'https://chroniclingamerica.loc.gov/search/pages/results/?'
 
-STATES = ["", "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Piedmont","Puerto Rico","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virgin Islands","Virginia","Washington","West Virginia","Wisconsin","Wyoming"]
-LANGS  = ["", "ara","hrv","cze","dak","dan","eng","fin","fre","ger","ice","ita","lit","nob","pol","rum","slo","slv","spa","swe"]
+STATES = ("", "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Piedmont","Puerto Rico","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virgin Islands","Virginia","Washington","West Virginia","Wisconsin","Wyoming")
+LANGS  = ("", "ara","hrv","cze","dak","dan","eng","fin","fre","ger","ice","ita","lit","nob","pol","rum","slo","slv","spa","swe")
+SORTS  = ('relevance', 'state', 'title', 'data')
 
 @dataclass
 class ChronAmQuery:
@@ -29,7 +31,7 @@ class ChronAmQuery:
         dateFilterType (str)  : `yearRange` for years only or `range` for full dates.
         date1          (date) : the start date for the search.
         date2          (date) : the end date for the search.
-        sequence       (int)  : the page of the issue to search, starting with `1` for the frontpage.
+        sequence       (int)  : the page of the issues to search, starting with `1` for the frontpage.
         language       (str)  : one of a limited subset of ISO 639-2 (three-letter) language codes; see the `LANGS` global defined in this module for a list of acceptable values.
     
     """
@@ -68,10 +70,10 @@ def validate_and_clean_query(query: ChronAmQuery, verbose=False) -> bool:
         return f'Query validation failed for attribute "{attr}": {msg}.'
     
     def log_cleaned(attr: str, before: str, fixed: str) -> None:
-        if verbose: print(f'\tFixed attribute "{attr}": "{before}" -> "{fixed}"')
+        if verbose: print(f'INFO: fixed attribute "{attr}": "{before}" -> "{fixed}"')
     
     def log_warning(msg: str) -> None:
-        if verbose: print(f'\tWARNING: {msg}')
+        if verbose: print(f'WARNING: {msg}')
 
     for term_attr in ('ortext', 'andtext', 'proxtext'):
         if any(' ' in text for text in query.__getattribute__(term_attr)):
@@ -113,69 +115,6 @@ def validate_and_clean_query(query: ChronAmQuery, verbose=False) -> bool:
             raise ValueError(get_error_msg('language', f'{query.language} not recognized; see docs for list of acceptable values.'))
         
     return True
-
-def query_to_params(query: ChronAmQuery) -> dict[str, str]:
-    """Transform a ChronAmQuery object into a dictionary of formatted URL parameters for use with the [Chronicling America advanced search API](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search).
-
-    It is recommended to first validate and clean the query with `validate_and_clean_query`, defined in this module.
-    
-    Arguments:
-        query (ChronAmQuery) : an object describing a set of query parameters for the Chronicling America advanced search API.
-
-    Returns:
-        _ (dict[str, str]) : a dictionary of formatted URL parameters for the Chronicling America advanced search API.
-
-    """
-
-    return {
-        'ortext'       : '+'.join(quote(or_str, safe='') for or_str in query.ortext),
-        'andtext'      : '+'.join(quote(and_str, safe='') for and_str in query.andtext),
-        'phrasetext'   : quote_plus(query.phrasetext),
-        'proxtext'     : '+'.join(quote(pro_str, safe='') for pro_str in query.proxtext),
-        'proxdistance' : str(query.proxdistance or ''),
-
-        'state'          : quote_plus(query.state),
-        'lccn'           : query.lccn,
-        'dateFilterType' : query.dateFilterType,
-        'date1'          : quote(query.date1.strftime('%Y') if query.dateFilterType == 'yearRange' else query.date1.strftime('%m/%d/%Y'), safe=''),
-        'date2'          : quote(query.date2.strftime('%Y') if query.dateFilterType == 'yearRange' else query.date2.strftime('%m/%d/%Y'), safe=''),
-        'sequence'       : str(query.sequence or ''),
-        'language'       : query.language,
-    }
-
-def query_to_url(query: ChronAmQuery, sort: str = 'relevance', rows: int = 50, verbose=False) -> str:
-    """Transform a ChronAmQuery object into a URL for retrieving JSON-formatted results from the [Chronicling America advanced search API](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search).
-
-    It is recommended to first validate and clean the query with `validate_and_clean_query`, defined in this module.
-    
-    Arguments:
-        query   (ChronAmQuery) : an object describing a set of query parameters for the Chronicling America advanced search API.
-        sort    (str)          : determines order of search results; one of 'relevance', 'state', 'title', 'date'.
-        rows    (int)          : the number of items to retrieve per page; must be a positive integer.
-        verbose (bool)         : if True, prints logging information to stdout.
-
-    Returns:
-        _ (str) : a parameterized URL for accessing results from the query as JSON.
-
-    """
-
-    if sort not in ('relevance', 'state', 'title', 'data'):
-        raise ValueError(f'Parameter "sort" must be one of "relevance", "state", "title", "data')
-    
-    if rows < 1:
-        raise ValueError(f'Parameter "rows" must be a positive integer')
-    
-    if rows > 100 and verbose:
-        print('WARNING: excessively large values for parameter "rows" may cause timeouts or long wait times')
-
-    query_params = query_to_params(query)
-    url_params = {
-        'sort'       : sort,
-        'rows'       : str(rows),
-        'format'     : 'json',
-        'searchType' : 'advanced'
-    }
-    return SEARCH_URL_BASE + '&'.join(f'{key}={value}' for key, value in (query_params | url_params).items())
 
 def url_to_query(url: str) -> ChronAmQuery:
     """Transform a URL obtained by using the [Chronicling America advanced search API](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search) into a ChronAmQuery object.
@@ -223,3 +162,66 @@ def url_to_query(url: str) -> ChronAmQuery:
         sequence       = int(query_dict.get('sequence', '0')),
         language       = query_dict.get('language', '')
     )
+
+def query_to_params(query: ChronAmQuery) -> dict[str, str]:
+    """Transform a ChronAmQuery object into a dictionary of formatted URL parameters for use with the [Chronicling America advanced search API](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search).
+
+    It is recommended to first validate and clean the query with `validate_and_clean_query`, defined in this module.
+    
+    Arguments:
+        query (ChronAmQuery) : an object describing a set of query parameters for the Chronicling America advanced search API.
+
+    Returns:
+        _ (dict[str, str]) : a dictionary of formatted URL parameters for the Chronicling America advanced search API.
+
+    """
+
+    return {
+        'ortext'       : '+'.join(quote(or_str, safe='') for or_str in query.ortext),
+        'andtext'      : '+'.join(quote(and_str, safe='') for and_str in query.andtext),
+        'phrasetext'   : quote_plus(query.phrasetext),
+        'proxtext'     : '+'.join(quote(pro_str, safe='') for pro_str in query.proxtext),
+        'proxdistance' : str(query.proxdistance or ''),
+
+        'state'          : quote_plus(query.state),
+        'lccn'           : query.lccn,
+        'dateFilterType' : query.dateFilterType,
+        'date1'          : quote(query.date1.strftime('%Y') if query.dateFilterType == 'yearRange' else query.date1.strftime('%m/%d/%Y'), safe=''),
+        'date2'          : quote(query.date2.strftime('%Y') if query.dateFilterType == 'yearRange' else query.date2.strftime('%m/%d/%Y'), safe=''),
+        'sequence'       : str(query.sequence or ''),
+        'language'       : query.language,
+    }
+
+def query_to_url(query: ChronAmQuery, sort: str = 'relevance', rows: int = 50, verbose=False) -> str:
+    """Transform a ChronAmQuery object into a URL for retrieving JSON-formatted results from the [Chronicling America advanced search API](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search).
+
+    It is recommended to first validate and clean the query with `validate_and_clean_query`, defined in this module.
+    
+    Arguments:
+        query   (ChronAmQuery) : an object describing a set of query parameters for the Chronicling America advanced search API.
+        sort    (str)          : determines ordering of search results; one of 'relevance', 'state', 'title', 'date'.
+        rows    (int)          : the number of items to retrieve per page; must be a positive integer.
+        verbose (bool)         : if True, prints logging information to stdout.
+
+    Returns:
+        _ (str) : a parameterized URL for accessing results from the query as JSON.
+
+    """
+
+    if sort not in SORTS:
+        raise ValueError(f'Parameter "sort" must be one of "relevance", "state", "title", "data')
+    
+    if rows < 1:
+        raise ValueError(f'Parameter "rows" must be a positive integer')
+    
+    if rows > 100 and verbose:
+        print('WARNING: excessively large values for parameter "rows" may cause timeouts or long wait times')
+
+    query_params = query_to_params(query)
+    url_params = {
+        'sort'       : sort,
+        'rows'       : str(rows),
+        'format'     : 'json',
+        'searchType' : 'advanced'
+    }
+    return SEARCH_URL_BASE + '&'.join(f'{key}={value}' for key, value in (query_params | url_params).items())
