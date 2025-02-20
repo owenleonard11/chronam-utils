@@ -295,6 +295,7 @@ class ChronAmQuery:
         """
 
         def retrieve_page_with_retry(page) -> int:
+            """Download page `page` with `n_retries` attempts."""
             for _ in range(n_retries):
                 try:
                     return self.retrieve_page(page, limiter, page_size)
@@ -313,6 +314,12 @@ class ChronAmQuery:
             return self.n_results
 
         for page in range(1, self.n_results // page_size + 2):
-            written += retrieve_page_with_retry(page)
+            if any(
+                (index < self.max_results and not self.results.get(index, '')) 
+                for index in range(page_size * (page - 1) + 1, page_size * page + 1)
+            ):
+                written += retrieve_page_with_retry(page)
+            else:
+                print(f'INFO: page {page} already present for query "{self.desc}", skipped.')
         
         return written
