@@ -1,15 +1,16 @@
 from modules.limit import ChronAmRateLimiter
-from typing import Optional, ClassVar
-from dataclasses import dataclass, field
+from typing import Any, Optional, ClassVar
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from urllib.parse import quote, quote_plus, unquote, unquote_plus
-from time import sleep
+from json import dump
 import requests
 
 SEARCH_URL_BASE : str = 'https://chroniclingamerica.loc.gov/search/pages/results/?'
 
 class ChronAmQuery:
-    """Stores parameters for a query to the [Chronicling America Search API](https://chroniclingamerica.loc.gov/about/api/#search). 
+    """Stores parameters for a query to the [Chronicling America Search API](https://chroniclingamerica.loc.gov/about/api/#search);
+    attributes correspond to url parameters. 
 
     Documentation for the API is limited. To best understand how searching Chronicling America works, I recommend playing around with the [advanced search function](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search) of the web interface.
     You can also take advantage of the `from_url` utility, which will automatically initialize a `ChronAmQuery` from a search result URL.
@@ -59,6 +60,7 @@ class ChronAmQuery:
     STATES : ClassVar[list[str]] = ["", "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Piedmont","Puerto Rico","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virgin Islands","Virginia","Washington","West Virginia","Wisconsin","Wyoming"]
     LANGS  : ClassVar[list[str]] = ["", "ara","hrv","cze","dak","dan","eng","fin","fre","ger","ice","ita","lit","nob","pol","rum","slo","slv","spa","swe"]
     SORTS  : ClassVar[list[str]] = ['relevance', 'state', 'title', 'data']
+    PARAMS : ClassVar[list[str]] = ['ortext', 'andtext', 'phrasetext', 'proxtext', 'proxdistance', 'state', 'lccn', 'dateFilterType', 'date1', 'date2', 'sequence', 'language', 'sort']
 
     def __init__(  
         self,
@@ -71,7 +73,7 @@ class ChronAmQuery:
         lccn: str  = '',
         dateFilterType: str  = 'yearRange',
         date1: date = date(1756, 1, 1),
-        date2: date = date(1963, 12, 31),
+        date2: date = date.today(),
         sequence: int  = 0,
         language: str  = '',
         sort: str = 'relevance',
@@ -140,6 +142,15 @@ class ChronAmQuery:
         self.results: dict[int, str] = {}
         
         self.desc = desc or str(id(self))
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Resets results if query parameters are changed."""
+        if getattr(self, 'n_results', -1) != -1 and name in ChronAmQuery.PARAMS:
+            self.results.clear()
+            super().__setattr__('n_results', -1)
+            print(f'INFO: query parameter {name} changed, stored results cleared.')
+
+        super().__setattr__(name, value)
     
     @staticmethod
     def from_url(url: str) -> 'ChronAmQuery':
@@ -221,33 +232,32 @@ class ChronAmQuery:
         """Returns a list of ids corresponding to a digitized newspaper page in the Chronicling America database."""
         return list(self.results.values())
     
-    def retrieve_page(self, page: int, limiter: ChronAmRateLimiter, page_size: int) -> int:
+    def retrieve_page(self, page: int, page_size: int, limiter: ChronAmRateLimiter) -> int:
         """Downloads, decodes and records a single page of query results.
         
         Arguments:
-            page      (int) : the page number (indexed from 1) to retrieve.
-            page_size (int) : the number of results per page.
+            page      (int)                : the page number (indexed from 1) to retrieve.
+            page_size (int)                : the number of results per page.
+            limiter   (ChronAmRateLimiter) : an object storing timestamps to prevent rate limiting from the API.
         
         Returns:
             _ (int) : the total number items written to `result`.
         
         Raises:
-            ValueError : if downloading or JSON decoding fails.
+            ValueError      : if downloading or JSON decoding fails.
+            ConnectionError : if no connection can be established to the host at loc.gov.
         
         """
 
         page_url = f'{self.url}&page={page}&rows={page_size}'
-
-        if (wait := limiter.check()):
-            print(f'INFO: rate limit reached; waiting {wait} seconds.')
-            sleep(wait + 0.1)
         
         try:
-            limiter.record()
-            response = requests.get(page_url)
+            response = limiter.submit(requests.get, page_url)
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             raise ValueError(f'ERROR: download for {page_url} failed with code {response.status_code}')
+        except ConnectionError:
+            raise ConnectionError(f'ERROR: failed to establish connection with the host at loc.gov.')
         
         try:
             response_json = response.json()
@@ -275,16 +285,16 @@ class ChronAmQuery:
         print(f'INFO: updated query "{self.desc}" with {written} items.')
         return written
     
-    def retrieve_all(self, limiter: ChronAmRateLimiter, page_size: int, n_retries: int = 3, max_workers: int = 4, allow_errors: bool = False, overwrite: bool = False):
+    def retrieve_all(self, page_size: int, limiter: ChronAmRateLimiter, exec: Optional[ThreadPoolExecutor]=None, n_retries: int = 3, overwrite: bool = False):
         """Populates `result` with newspaper page IDs by running a [Chronicling America advanced search](https://chroniclingamerica.loc.gov/#tab=tab_advanced_search).
 
         Arguments:
-            limiter      (ChronAmRateLimiter) : an object storing timestamps to prevent rate limiting from the API.
-            page_size    (int)                : the number of results to be retrieved per page.
-            n_retries    (int)                : the number of times per page to retry failed download and decoding.
-            max_workers  (int)                : the maximum number of threads to use for concurrent retrieval of IDs.
-            allow_errors (bool)               : if True, continue even if page download and decoding fail `n_retry` times.
-            overwrite    (bool)               : if True, overwrite pages that have already been retrieved.
+            limiter      (ChronAmRateLimiter)        : an object storing timestamps to prevent rate limiting from the API.
+            page_size    (int)                       : the number of results to be retrieved per page.
+            exec         (ThreadPoolExecutor | None) : an optional executor for executing page retrievals concurrently.
+            n_retries    (int)                       : the number of times per page to retry failed download and decoding.
+            max_workers  (int)                       : the maximum number of threads to use for concurrent retrieval of IDs.
+            overwrite    (bool)                      : if True, overwrite pages that have already been retrieved.
 
         Returns:
             _ (int) : the total number items written to `result`.
@@ -294,32 +304,43 @@ class ChronAmQuery:
 
         """
 
-        def retrieve_page_with_retry(page) -> int:
+        def retrieve_page_with_retry(page: int) -> int:
             """Download page `page` with `n_retries` attempts."""
             for _ in range(n_retries):
                 try:
-                    return self.retrieve_page(page, limiter, page_size)
+                    return self.retrieve_page(page, page_size, limiter)
                 except ValueError as e:
-                    error_msg = str(e)
-                
-            if allow_errors:
-                print(f'ERROR: download for query "{self.desc}" page {page} failed {n_retries} times, skipping page and proceeding.')
-                return 0
-    
-            raise ValueError(error_msg)
+                    print(f'ERROR: download for query "{self.desc}" page {page} failed, retrying.')
+                    msg = str(e)
+            
+            raise ValueError(msg)
         
-        written = 0
-        written += retrieve_page_with_retry(1)
-        if self.n_results <= page_size:
-            return self.n_results
-
-        for page in range(1, self.n_results // page_size + 2):
-            if any(
-                (index < self.max_results and not self.results.get(index, '')) 
-                for index in range(page_size * (page - 1) + 1, page_size * page + 1)
-            ):
-                written += retrieve_page_with_retry(page)
-            else:
+        page, written = 1, 0
+        while self.n_results == -1 or page < self.n_results // page_size + 2:
+            indices = range(page_size * (page - 1) + 1, min(self.max_results, page_size * page  + 1))
+            is_full = all(self.results.get(index, '') for index in indices)
+            if is_full:
                 print(f'INFO: page {page} already present for query "{self.desc}", skipped.')
+            else:
+                written += retrieve_page_with_retry(page)
+            page += 1
         
         return written
+
+    def dump_json(self, filepath: str) -> None:
+        """Writes the query results to `filepath` as JSON."""
+        with open(filepath, 'w') as fp:
+            dump(self.results, fp, indent=4)
+
+    def dump_txt(self, filepath: str) -> int:
+        """Writes the query results to a text file as a newline-separated list of IDs. Returns the number of characters written."""
+        with open(filepath, 'w') as fp:
+            return sum(fp.write(id) for id in self.results.values())
+
+class ChronAmMultiquery:
+    """"
+    
+    """
+
+    def __init__(self):
+        pass
