@@ -419,6 +419,45 @@ class ChronAmBasicQuery(ChronAmQuery):
             raise ValueError(f'ERROR: Failed to parse dates ({date1}, {date2}).')
 
         super().__init__(state=state, proxtext=proxtext, date1=parsed_date1, date2=parsed_date2, sort=sort, max_results=max_results, desc=desc)
+    
+    @classmethod
+    def from_url(cls, url: str) -> 'ChronAmBasicQuery':
+        """Initializes a ChronAmBasicQuery object from a URL obtained by using [Chronicling America basic search](https://chroniclingamerica.loc.gov/#tab=tab_search).
+
+        This function does **not** store pagination details, even if they are present in the provided URL.
+        
+        Arguments:
+            url (str)      : a URL corresponding to a page of search results from the Chronicling America basic search API.
+
+        Returns:
+            _ (ChronAmQuery): an object describing a set of query parameters for the Chronicling America basic search API.
+
+        Raises:
+            ValueError: if the URL is malformed or its parameters are badly formatted.
+
+        """
+
+        url = url.replace('https://chroniclingamerica.loc.gov/search/pages/results/?', '')
+        url = url.replace('#tab=tab_search', '')
+
+        try:
+            query_dict: dict[str, str] = {key: value for key, value in (param.split('=') for param in url.split('&'))}
+        except:
+            raise ValueError("Failed to parse URL params.")
+        
+        if query_dict.get('searchType', '') != 'basic':
+            raise ValueError("This function only handles URLs from the Chronicling America basic search at https://chroniclingamerica.loc.gov/#tab=tab_search. Use ChronAmQuery for URLs from the advanced search interface.")
+
+        for key in ('rows', 'page', 'format', 'searchType'):
+            query_dict.pop(key, None)
+
+        return ChronAmBasicQuery(
+            proxtext = [unquote(pro_str) for pro_str in query_dict.get('proxtext', '').split('+')],
+            state    = unquote_plus(query_dict.get('state', '')),
+            date1    = query_dict['date1'],
+            date2    = query_dict['date2'],
+            sort = query_dict.get('sort', 'relevance')
+        )
 
 class ChronAmMultiQuery:
     """Handles rate limiting and concurrency for multiple ChronAmQuery instances.
