@@ -459,6 +459,20 @@ class ChronAmBasicQuery(ChronAmQuery):
             sort = query_dict.get('sort', 'relevance')
         )
 
+    @property
+    def url(self) -> str:
+        """Returns a URL for retrieving JSON-formatted query results."""
+
+        url_params = {
+            'proxtext': '+'.join(quote(pro_str, safe='') for pro_str in self.proxtext),
+            'state': quote_plus(self.state),
+            'dateFilterType': self.dateFilterType,
+            'date1': quote(self.date1.strftime('%m/%d/%Y'), safe=''),
+            'date2': quote(self.date2.strftime('%m/%d/%Y'), safe=''),
+        }
+
+        return SEARCH_URL_BASE + '&'.join(f'{key}={value}' for key, value in (url_params).items())
+
 class ChronAmMultiQuery:
     """Handles rate limiting and concurrency for multiple ChronAmQuery instances.
 
