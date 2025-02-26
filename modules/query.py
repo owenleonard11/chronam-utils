@@ -469,6 +469,9 @@ class ChronAmBasicQuery(ChronAmQuery):
             'dateFilterType': self.dateFilterType,
             'date1': quote(self.date1.strftime('%m/%d/%Y'), safe=''),
             'date2': quote(self.date2.strftime('%m/%d/%Y'), safe=''),
+
+            'format': 'json',
+            'searchType': 'advanced'
         }
 
         return SEARCH_URL_BASE + '&'.join(f'{key}={value}' for key, value in (url_params).items())
