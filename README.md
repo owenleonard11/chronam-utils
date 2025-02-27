@@ -53,15 +53,15 @@ The `limiter` object will keep track of timestamps to make sure that queries and
 
 ### Making a Query
 The easiest way to initialize a query is to use [Chronicling America Search interface](https://chroniclingamerica.loc.gov/#tab=tab_search). After choosing a state, range of years, and search terms, click "Go" and wait for the results. Once the results page appears, copy the entire URL and paste it into the `ChronAmQuery.from_url()` initializer:
-```
+```python
 query = ChronAmBasicQuery.from_url('<YOUR/URL/HERE>')
 ```
 If initialization has succeeded, you should be able to see your choices as properties of the object by running
-```
+```python
 print(query)
 ```
 To retrieve a set of results for the query, use `query.retrieve_all()`. The first argument is the number of results to retrieve per page, and the second argument is the `limiter` we defined earlier:
-```
+```python
 query.retrieve_all(25, limiter)
 ```
 By default, queries retrieve a maximum of 50 results; the code above will thus retrieve 2 pages of 25 results each. Retrieval may take some time, since the Chronicling America API has to filter and search over 21 million pages. If the query is successful, you should see something like the following:
@@ -71,26 +71,26 @@ INFO: updated query "139746080010400" with 50 items.
 ```
 
 At first, query results are stored in memory and will be lost if Python is interrupted. To store the results in a file, use the `dumpt_txt()` method:
-```
+```python
 query.dump_txt('data/query.txt')
 ```
 This will write the results as a newline-separated list of IDs to the file at `data/query.txt`.
 
 ### Downloading Files
 Now that we have a list of IDs, we can download the associated files. We first initialize a `ChronAmDownloader` from the file we wrote our results to:
-```
+```python
 loader = ChronAmDownloader.from_file('data/query.txt', 'data/files/', limiter)
 ```
 Here `data/files/` is the directory to which the files will be downloaded—you'll have to make the folder first. Note that`limiter` is the `ChronAmRateLimiter` that we have already defined—this is important, since querying and downloading share a rate limit. You can check the length of `loader.ids` to make sure that the query results were property loaded:
-```
+```python
 len(loader.ids)
 ```
 If you used the provided query, the result should be `50`. To download all of the text files associated with the query results, simply use
-```
+```python
 loader.download_all('txt')
 ```
 Once the download has been completed, you can use the `check_downloads()` method to see how many files have been downloaded relative to the total number of results from the query:
-```
+```python
 loader.check_downloads('txt')
 ```
 If all 50 results were successfully downloaded, you should see
