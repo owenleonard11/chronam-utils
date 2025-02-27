@@ -72,6 +72,15 @@ class ChronAmDownloader:
             return f'{base_url}{id[:-1]}.{filetype}'
         else:
             raise ValueError('ERROR: filetype must be one of ("xml", "txt", "pdf", "jp2")')
+    
+    def id_to_path(self, id: str, filetype: str) -> str:
+        """Returns the path to the file associated with the provided ID and filetype."""
+        return f'{path.join(self.data_dir, id[:-1])}.{filetype}'
+    
+    @property
+    def paths(self) -> list[str]:
+        """Returns a list of paths to downloaded files."""
+        return [self.id_to_path(id, filetype) for id, types in self.ids.items() for filetype in types]
         
     def check_downloads(self, filetype: str) -> None:
         """Checks whether files of type `filetype` have been downloaded and updates `self.ids` accordingly."""
@@ -105,11 +114,10 @@ class ChronAmDownloader:
         
         url = ChronAmDownloader.id_to_url(id, filetype)
         Path(path.join(self.data_dir, id.split('seq')[0])).mkdir(parents=True, exist_ok=True)
-        filepath = f'{path.join(self.data_dir, id[:-1])}.{filetype}'
         try:
             with self.limiter.submit(requests.get, url) as response:
                 response.raise_for_status()
-                with open(filepath, 'wb') as file:
+                with open(self.id_to_path(id, filetype), 'wb') as file:
                     for chunk in response.iter_content(chunk_size=8192):
                         file.write(chunk)
 
@@ -120,7 +128,7 @@ class ChronAmDownloader:
         
 
         self.ids[id].add(filetype)
-        return filepath
+        return self.id_to_path(id, filetype)
 
     def download_all(self, filetype: str, n_retries: int=3, overwrite: bool=False, allow_fail: bool=False) -> tuple[int, int, int]:
         """Downloads all the file of type `filetype` for each ID in `self.ids`.
