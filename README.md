@@ -36,12 +36,23 @@ env\Scripts\activate
 ```
 source env/bin/activate
 ```
-Finally, simply run the following to install the required packages using pip:
+Now, simply run the following to install the required packages using pip:
 ```
 pip install -r requirements.txt
 ```
+If you intend to use Jupyter notebooks, also install the dev requirements:
+```
+pip install -r requirements-dev.txt
+```
+
 ### Getting Started
-To get started with Generating Chronicling, first import the `query`, `limit`, and `download` modules and initialize a `ChronAmRateLimiter`:
+To get started, create a new notebook in the `generating-chronicling` directory:
+```
+touch quickstart.ipynb
+```
+You can also follow along in the provided `noteboks/quickstart_notebook.ipynb`, or simply run `python` to start an interactive Python instance.
+
+First, import the `query`, `limit`, and `download` modules and initialize a `ChronAmRateLimiter`:
 ```python
 from modules.query import *
 from modules.limit import *
@@ -49,7 +60,7 @@ from modules.download import *
 
 limiter = ChronAmRateLimiter()
 ```
-The `limiter` object will keep track of timestamps to make sure that queries and downloads don't exceed the limits set by the Library of Congress newspaper API.
+The `limiter` object will keep track of timestamps to make sure that queries and downloads don't exceed the limits set by the Library of Congress newspaper API. If your IDE prompts you to select a kernel, select the virtual environment you created during **Download & Installation**—it should be called `env`.
 
 ### Making a Query
 The easiest way to initialize a query is to use [Chronicling America Search interface](https://chroniclingamerica.loc.gov/#tab=tab_search). After choosing a state, range of years, and search terms, click "Go" and wait for the results. Once the results page appears, copy the entire URL and paste it into the `ChronAmQuery.from_url()` initializer:
@@ -69,23 +80,29 @@ By default, queries retrieve a maximum of 50 results; the code above will thus r
 INFO: found 21072 results for query 139746080010400
 INFO: updated query "139746080010400" with 50 items.
 ```
+We can also view the results stored in `query.results`:
+```python
+list(query.results.values())[:5]
+```
 
 At first, query results are stored in memory and will be lost if Python is interrupted. To store the results in a file, use the `dumpt_txt()` method:
 ```python
 query.dump_txt('data/query.txt')
 ```
-This will write the results as a newline-separated list of IDs to the file at `data/query.txt`.
+This will write the results as a newline-separated list of IDs to the file at `data/query.txt`—if this gives an error, make sure that the `data` directory exists.
 
 ### Downloading Files
 Now that we have a list of IDs, we can download the associated files. We first initialize a `ChronAmDownloader` from the file we wrote our results to:
 ```python
 loader = ChronAmDownloader.from_file('data/query.txt', 'data/files/', limiter)
 ```
-Here `data/files/` is the directory to which the files will be downloaded—you'll have to make the folder first. Note that`limiter` is the `ChronAmRateLimiter` that we have already defined—this is important, since querying and downloading share a rate limit. You can check the length of `loader.ids` to make sure that the query results were property loaded:
+Here `data/files/` is the directory to which the files will be downloaded—you'll have to make the folder exists first. Note that`limiter` is the `ChronAmRateLimiter` that we have already defined—this is important, since querying and downloading share a rate limit. You can check the length of `loader.ids` to make sure that the query results were property loaded:
 ```python
-len(loader.ids)
+list(loader.ids.keys())[:5]
 ```
-If you used the provided query, the result should be `50`. To download all of the text files associated with the query results, simply use
+The result should look the same as the result from running `list(query.results.values())[:5]`. 
+
+To download all of the text files associated with the query results, simply use
 ```python
 loader.download_all('txt')
 ```
@@ -93,7 +110,4 @@ Once the download has been completed, you can use the `check_downloads()` method
 ```python
 loader.check_downloads('txt')
 ```
-If all 50 results were successfully downloaded, you should see
-```
-INFO: found 50 files of type "txt"; 0 not found.
-```
+And now the files should be viewable in `data/files/`.
