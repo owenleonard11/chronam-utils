@@ -80,7 +80,7 @@ class ChronAmQuery:
         sequence: int  = 0,
         language: str  = '',
         sort: str = 'relevance',
-        max_results: int = 0,
+        max_results: int = 50,
         desc: str = '' 
     ) -> None:
         """Initializes the object and validates attributes where applicable. Raises ValueError if attributes cannot be validated or fixed."""
@@ -382,7 +382,7 @@ class ChronAmQuery:
     def dump_txt(self, filepath: str) -> int:
         """Writes the query results to a text file as a newline-separated list of IDs. Returns the number of IDs written."""
         with open(filepath, 'w') as fp:
-            return sum(bool(fp.write(id)) for id in self.results.values())
+            return sum(bool(fp.write(f'{id}\n')) for id in self.results.values())
 
 class ChronAmBasicQuery(ChronAmQuery):
     """A subclass of `ChronAmQuery` that instead uses the more limited [Chronicling America Basic Search](https://chroniclingamerica.loc.gov/#tab=tab_search)."""
