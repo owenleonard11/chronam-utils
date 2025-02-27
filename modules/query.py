@@ -225,8 +225,9 @@ class ChronAmQuery:
             date2          = cls._parse_date(query_dict['date2'], 'end', query_dict['dateFilterType']), 
             sequence       = int(query_dict.get('sequence', '0')),
             language       = query_dict.get('language', ''),
-
-            sort = query_dict.get('sort', 'relevance')
+            
+            max_results = 50,
+            sort        = query_dict.get('sort', 'relevance')
         )
     
     @property
