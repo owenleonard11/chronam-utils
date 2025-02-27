@@ -451,11 +451,12 @@ class ChronAmBasicQuery(ChronAmQuery):
             query_dict.pop(key, None)
 
         return ChronAmBasicQuery(
-            proxtext = [unquote(pro_str) for pro_str in query_dict.get('proxtext', '').split('+')],
-            state    = unquote_plus(query_dict.get('state', '')),
-            date1    = query_dict['date1'],
-            date2    = query_dict['date2'],
-            sort = query_dict.get('sort', 'relevance')
+            proxtext    = [unquote(pro_str) for pro_str in query_dict.get('proxtext', '').split('+')],
+            state       = unquote_plus(query_dict.get('state', '')),
+            date1       = query_dict['date1'],
+            date2       = query_dict['date2'],
+            sort        = query_dict.get('sort', 'relevance'),
+            max_results = 50
         )
 
     @property
