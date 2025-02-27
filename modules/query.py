@@ -334,12 +334,12 @@ class ChronAmQuery:
         """
 
         def retrieve_page_with_retry(page: int) -> int:
-            """Download page `page` with `n_retries` attempts."""
-            for _ in range(n_retries):
+            """Retrieves page `page` with `n_retries` attempts."""
+            for i in range(n_retries):
                 try:
                     return self.retrieve_page(page, page_size, limiter)
                 except ValueError as e:
-                    print(f'ERROR: download for query "{self.desc}" page {page} failed, retrying.')
+                    print(f'ERROR: download for query "{self.desc}" page {page} failed; {n_retries - i - 1} attempts remaining.')
                     msg = str(e)
             
             raise ValueError(msg)
