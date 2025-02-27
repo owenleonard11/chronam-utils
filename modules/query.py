@@ -323,14 +323,13 @@ class ChronAmQuery:
             page_size    (int)                       : the number of results to be retrieved per page.
             executor     (ThreadPoolExecutor | None) : an optional executor for executing page retrievals concurrently.
             n_retries    (int)                       : the number of times per page to retry failed download and decoding.
-            max_workers  (int)                       : the maximum number of threads to use for concurrent retrieval of IDs.
             overwrite    (bool)                      : if True, overwrite pages that have already been retrieved.
 
         Returns:
-            _ (int) : the total number items written to `result`.
+            _ (int) : the total number of items written to `result`.
 
         Raises:
-            ValueError : if `allow_errors=False` and page download and decoding fails after `n_retry` attempts.
+            ValueError : if page download and decoding fails after `n_retries` attempts.
 
         """
 
@@ -399,7 +398,7 @@ class ChronAmBasicQuery(ChronAmQuery):
             sort: str = 'relevance',
             max_results: int = 0,
             desc: str =''
-        ):
+        ) -> None:
         """Initializes the object using the `ChronAmQuery` initializer with only basic parameters specified.
         
         Arguments:
@@ -491,7 +490,7 @@ class ChronAmMultiQuery:
         self.limiter  = limiter
         self.executor = executor
     
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> ChronAmQuery:
         """Allows indexing for retrieval of individual queries."""
         return self.queries[index]
     
@@ -513,7 +512,7 @@ class ChronAmMultiQuery:
                     if not allow_duplicates and query in set():
                         continue
                     else:
-                        fp.write(id)
+                        fp.write(f'{id}\n')
                         written.add(id)
             
             return len(written)
