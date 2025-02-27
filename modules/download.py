@@ -82,7 +82,7 @@ class ChronAmDownloader:
                 types.add(filetype)
                 exists += 1
         
-        print(f'INFO: found {exists} files of type "{filetype}"; {len(self.ids) - exists} not found.')
+        print(f'INFO: {exists} files of type "{filetype}" already present; {len(self.ids) - exists} not found.')
 
     def download_file(self, id: str, filetype: str) -> str:
         """Downloads an XML, TXT, PDF, or JP2 file for the provided ID to `self.data_dir/<lccn>/<YYYY>-<MM>-<DD>/ed-<edition_no>/seq-<page_no>.<filetype>`.
@@ -177,7 +177,6 @@ class ChronAmDownloader:
         if self.executor:
             downloaded = sum(worker.result() for worker in as_completed(workers))
             failed = sum(not worker.result() for worker in as_completed(workers))
-
+        
+        print(f'INFO: {downloaded} downloaded, {failed} failed, {skipped} skipped.')
         return downloaded, failed, skipped
-
-
