@@ -159,7 +159,7 @@ class ChronAmQuery:
     def __str__(self) -> str:
         """Returns a string representation of the query."""
         param_string = '\n'.join(f'\t{param}: {self.__getattribute__(param)}' for param in type(self).PARAMS)
-        return f'{type(self).__name__}(\n\tdescription: "{self.desc}"\n{param_string}\n)'
+        return f'{type(self).__name__}(\n\tdescription: "{self.desc}"\n{param_string}\n{self.results})'
     
     def __repr__(self) -> str:
         """See `__str__`."""
