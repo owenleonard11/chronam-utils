@@ -110,4 +110,13 @@ Once the download has been completed, you can use the `check_downloads()` method
 ```python
 loader.check_downloads('txt')
 ```
-And now the files should be viewable in `data/files/`.
+And now the files should be viewable in `data/files/`. We can see the list of downloaded files by calling
+```python
+print(loaders.paths)
+```
+We can also check out the first 10 lines of one of the text files:
+```python
+with open(loader.paths[0], 'r') as fp:
+    for i in range(10):
+        print(fp.readline())
+```
