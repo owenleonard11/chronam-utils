@@ -23,30 +23,39 @@ class ChronAmRateLimiter:
         self.burst_lock = Lock()
         self.crawl_lock = Lock()
 
-    def record(self):
-        """Record timestamp when request is made."""
-        with self.burst_lock: self.burst_times.append(time())
-        with self.crawl_lock: self.crawl_times.append(time())
+    def _record_with_lock(self):
+        """Records timestamp when request is made; assumes that the current thread has both `burst_lock` and `crawl_lock`."""
+        self.burst_times.append(time())
+        self.crawl_times.append(time())
 
-    def check(self) -> float:
-        """Check whether limits are exceeded, return the time to wait."""
+    def _check(self) -> float:
+        """Checks whether limits are exceeded and returns the time to wait; assumes that the current thread has both `burst_lock` and `crawl_lock`"""
         burst_wait, crawl_wait = float(0), float(0)
-        with self.burst_lock:
-            self.burst_times = [t for t in self.burst_times if time() - t < ChronAmRateLimiter.BURST_WINDOW]
-            if len(self.burst_times) > ChronAmRateLimiter.BURST_MAX:
-                burst_wait = max(0, self.burst_times[0] + ChronAmRateLimiter.BURST_WINDOW - time())
+        self.burst_times = [t for t in self.burst_times if time() - t < ChronAmRateLimiter.BURST_WINDOW]
+        if len(self.burst_times) > ChronAmRateLimiter.BURST_MAX:
+            burst_wait = max(0, self.burst_times[0] + ChronAmRateLimiter.BURST_WINDOW - time())
 
-        with self.crawl_lock:
-            self.crawl_times = [t for t in self.crawl_times if time() - t < ChronAmRateLimiter.CRAWL_WINDOW]
-            if len(self.crawl_times) > ChronAmRateLimiter.CRAWL_MAX:
-                crawl_wait = max(0, self.crawl_times[0] + ChronAmRateLimiter.CRAWL_WINDOW - time())
+        self.crawl_times = [t for t in self.crawl_times if time() - t < ChronAmRateLimiter.CRAWL_WINDOW]
+        if len(self.crawl_times) > ChronAmRateLimiter.CRAWL_MAX:
+             crawl_wait = max(0, self.crawl_times[0] + ChronAmRateLimiter.CRAWL_WINDOW - time())
         
         return max(burst_wait, crawl_wait)
 
     def submit(self, f: Callable[..., _R], *args, **kwargs) -> _R:
-        """Waits `self.check()` seconds then runs `f(*args, **kwargs)`, recording the timestamp."""
-        if (wait := self.check()):
+        """Runs f(*args, **kwargs) as soon as possible without exceeding the rate limit."""
+        self.burst_lock.acquire()
+        self.crawl_lock.acquire()
+
+        if (wait := self._check()):
             print(f'INFO: rate limit reached; waiting {wait} seconds.')
             sleep(wait + 0.1)
+            self.burst_lock.release()
+            self.crawl_lock.release()
+            return self.submit(f, *args, **kwargs)
 
-        return f(*args, **kwargs)
+        self._record_with_lock()
+        result = f(*args, **kwargs)
+
+        self.burst_lock.release()
+        self.crawl_lock.release()
+        return result

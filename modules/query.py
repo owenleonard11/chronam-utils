@@ -371,7 +371,7 @@ class ChronAmQuery:
             remaining -= page_size
         
         if executor:
-            return sum(worker.result() for worker in as_completed(workers))
+            return written + sum(worker.result() for worker in as_completed(workers))
         else:
             return written
 
