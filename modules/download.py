@@ -177,14 +177,12 @@ class ChronAmDownloader:
             if self.executor:
                 workers.append(self.executor.submit(download_file_with_retry, id, filetype))
             else:
-                if download_file_with_retry(id, filetype):
-                    downloaded += 1
-                else:
-                    failed += 1
+                downloaded += bool(download_file_with_retry(id, filetype))
         
         if self.executor:
             downloaded = sum(worker.result() for worker in as_completed(workers))
-            failed = sum(not worker.result() for worker in as_completed(workers))
+        
+        failed = len(self.ids) - downloaded - skipped
         
         print(f'INFO: {downloaded} downloaded, {failed} failed, {skipped} skipped.')
         return downloaded, failed, skipped
