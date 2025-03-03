@@ -72,3 +72,7 @@ class ChronAmXMLProcessor:
             dump(page_dict, fp, indent=4)
 
         return json_path
+    
+    def process_all(self, include_bounding_box=False, overwrite=False) -> list[str]:
+        """Processes all of the XML files in `self.files` into JSON files using `process_xml`; returns a list of the files written."""
+        return [ChronAmXMLProcessor.process_xml(filepath, include_bounding_box, overwrite) for filepath in self.files]
