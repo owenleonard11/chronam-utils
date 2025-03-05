@@ -39,8 +39,8 @@ class ChronAmXMLProcessor:
 
         def add_bounding_box(root: ET.Element, dic: dict) -> None:
             """Utility function for reading bounding box data from `root` into `dic`."""
-            left,  upper = int(root.attrib['HPOS']), int(root.attrib['VPOS'])
-            right, lower = left + int(root.attrib["WIDTH"]), upper + int(root.attrib['HEIGHT'])
+            left,  upper = float(root.attrib['HPOS']), float(root.attrib['VPOS'])
+            right, lower = left + float(root.attrib["WIDTH"]), upper + float(root.attrib['HEIGHT'])
             dic['left'], dic['upper'], dic['right'], dic['lower'] = left, upper, right, lower
 
         if not filepath.endswith('xml'):
