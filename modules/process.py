@@ -57,8 +57,8 @@ class ChronAmXMLProcessor:
         for subtag in ('Layout', 'Page'):
             root = root.find(f'{schema}{subtag}') or ET.Element('')
         if include_bounding_box:
-            page_dict['height'] = root.attrib['HEIGHT']
-            page_dict['width']  = root.attrib['WIDTH']
+            page_dict['height'] = float(root.attrib['HEIGHT'])
+            page_dict['width']  = float(root.attrib['WIDTH'])
 
         root = root.find(f'{schema}PrintSpace') or ET.Element('')
         for block in root.findall(f'{schema}TextBlock'):
