@@ -29,12 +29,15 @@ class ChronAmJP2Clipper:
         upper, lower = dic['upper'] / ratio_h, dic['lower'] / ratio_h
         return left, upper, right, lower
 
-    def clip(self, filepath: str, level: str) -> None:
+    def clip(self, filepath: str, level: str) -> tuple[int, str]:
         """Clips PNG images from the specified JP2 file at the specified level. PNG images are stored in a 'clippings-<level>' subirectory in the same directory as the provided `filepath`.
         
         Arguments:
             path  (str) : a path without a file extension; both .json and .jp2 extensions must be present.
             level (str) : the level of granularity at which to clip; one of "block," "line," or "word".
+
+        Returns:
+            _ (tuple[int, str]) : a tuple containing the number of clippings saved and the directory they were saved to.
         """
 
         for ext in ('json', 'jp2'):
@@ -55,12 +58,14 @@ class ChronAmJP2Clipper:
         jp2_width, jp2_height = jp2.size
         ratio_w, ratio_h = page_dict['width'] / jp2_width, page_dict['height'] / jp2_height
 
+        clipped = 0
         for block_id, block_dict in page_dict.items():
             # skip the "height" and "width" entries
             if type(block_dict) is float:
                 continue
             if level == 'block': 
                 jp2.crop(ChronAmJP2Clipper.get_box(block_dict, ratio_w, ratio_h)).save(path.join(clippings_dir, f'{block_id}.png'))
+                clipped += 1
 
             else:
                 for line_id, line_dict in block_dict.items():
@@ -68,9 +73,15 @@ class ChronAmJP2Clipper:
                         continue
                     if level == 'line':
                         jp2.crop(ChronAmJP2Clipper.get_box(line_dict, ratio_w, ratio_h)).save(path.join(clippings_dir, f'{line_id}.png'))
+                        clipped += 1
                     
                     else:
                         for string_id, string_dict in line_dict.items():
                             if type(line_dict) is float:
                                 continue
                             jp2.crop(ChronAmJP2Clipper.get_box(string_dict, ratio_w, ratio_h)).save(path.join(clippings_dir, f'{string_id}.png'))
+                            clipped += 1
+        
+        print(f'INFO: saved {clipped} clippings to {clippings_dir}.')
+        return clipped, clippings_dir
+
