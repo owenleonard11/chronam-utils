@@ -40,9 +40,21 @@ Now, simply run the following to install the required packages using pip:
 ```
 pip install -r requirements.txt
 ```
-If you intend to use Jupyter notebooks, also install the dev requirements:
+If you intend to use Jupyter notebooks, also install the IPython requirements:
 ```
-pip install -r requirements-dev.txt
+pip install -r requirements-ipy.txt
+```
+If you don't intend to work with images, you can continue to **Getting Started**.
+
+> **NOTE**: The instructions that follow are only necessary if you intend to work with images. This setup is potentially more complicated, so feel free to skip it if you only intend to work with `pdf`, `xml`, or `txt` files.
+
+Otherwise, install the image processing requirements:
+```
+pip install -r requirements-img.txt
+```
+Images from *Chronicling America* are formatted as JPEG 2000 files, which the [Pillow library needs some help to process correctly](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html). You'll need to visit the [documentation for OpenJPEG](https://github.com/uclouvain/openjpeg/blob/master/INSTALL.md) and follow the installation instructions for your operating system. One OpenJPEG has been installed, you'll need to rebuild pillow:
+```
+pip install --force-reinstall --no-binary :all: pillow
 ```
 
 ### Getting Started
@@ -119,4 +131,43 @@ We can also check out the first 10 lines of one of the text files:
 with open(loader.paths[0], 'r') as fp:
     for i in range(10):
         print(fp.readline())
+```
+### Clipping Images
+> **NOTE**: Working with images requries additional setup. Make sure you have completed **all** of the steps under **Download & Installation** before proceeding.
+
+First, we need to use our `ChronAmDownloader` to download the image files:
+```python
+loader.download_all('jp2')
+```
+
+Next, we import the `clip` module and intialize a `ChronAmJP2Clipper` from the processed JSON:
+```python
+from modules.clip import *
+
+clipper = ChronAmJP2Clipper('data/files')
+```
+To make sure the files have been ready correctly, we can peek the first five names with
+```python
+clipper.files[:5]
+```
+To clip images, we need to run the XML processor again with instructions to extract bounding box data. We also set the `overwrite` flag so that the new JSON replaces the existing files.
+```python
+json_paths = processor.process_all(include_bounding_box=True, overwrite=True)
+```
+Now we can clip out all the lines from the first page:
+```python
+clipped, clippings_dir = clipper.clip(clipper.files[0], 'line')
+```
+We can also clip at the block level or the word level by setting the second argument of `clip()` to `'block'` or '`word'` respectively. 
+
+Optionally, we can import `IPython.display` to view images interactively in Jupyter notebooks. This program selects five lines at random to generate a short "poem":
+```python
+from IPython.display import display, Image
+from random import sample
+from os import listdir, path
+
+# randomly sample and display five lines
+clippings = [path.join(clippings_dir, filename) for filename in listdir(clippings_dir)]
+for clipping in sample(clippings, 5):
+    display(Image(filename=clipping))
 ```
