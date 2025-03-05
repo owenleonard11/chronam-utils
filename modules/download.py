@@ -87,6 +87,7 @@ class ChronAmDownloader:
 
         exists = 0
         for id, types in self.ids.items():
+            types.clear()
             if path.exists(f'{path.join(self.data_dir, id[:-1])}.{filetype}'):
                 types.add(filetype)
                 exists += 1
