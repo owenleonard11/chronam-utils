@@ -48,14 +48,19 @@ class ChronAmXMLProcessor:
         
         root = ET.parse(filepath).getroot() or ET.Element('')
         schema = root[0].tag.split('}')[0] + '}'
-
-        for subtag in ('Layout', 'Page', 'PrintSpace'):
-            root = root.find(f'{schema}{subtag}') or ET.Element('')
         
         if root.tag == '':
             raise ValueError(f'Failed to parse XML file at {filepath}')
         
         page_dict = {}
+
+        for subtag in ('Layout', 'Page'):
+            root = root.find(f'{schema}{subtag}') or ET.Element('')
+        if include_bounding_box:
+            page_dict['height'] = root.attrib['HEIGHT']
+            page_dict['width']  = root.attrib['WIDTH']
+
+        root = root.find(f'{schema}PrintSpace') or ET.Element('')
         for block in root.findall(f'{schema}TextBlock'):
             block_dict = {}
             if include_bounding_box: add_bounding_box(block, block_dict)
