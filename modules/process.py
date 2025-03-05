@@ -33,6 +33,10 @@ class ChronAmXMLProcessor:
 
         """
 
+        json_path = path.join(path.dirname(filepath), path.basename(filepath).replace('xml', 'json'))
+        if path.exists(json_path) and not overwrite:
+            return json_path
+
         def add_bounding_box(root: ET.Element, dic: dict) -> None:
             """Utility function for reading bounding box data from `root` into `dic`."""
             left,  upper = int(root.attrib['HPOS']), int(root.attrib['VPOS'])
@@ -67,7 +71,6 @@ class ChronAmXMLProcessor:
                 block_dict[line.attrib['ID']] = line_dict
             page_dict[block.attrib['ID']] = block_dict
         
-        json_path = path.join(path.dirname(filepath), path.basename(filepath).replace('xml', 'json'))
         with open(json_path, 'w') as fp:
             dump(page_dict, fp, indent=4)
 
