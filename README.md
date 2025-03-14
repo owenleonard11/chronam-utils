@@ -1,4 +1,4 @@
-# Generating Chronicling America
+# chronam-utils (Chronicling America Utilities)
 This repository contains modules for interacting with the [Chronicling America](https://chroniclingamerica.loc.gov/) database of historical newspapers, in support of an upcoming project on post-OCR correction and retrieval-augmented generation.
 
 ## Project Overview
