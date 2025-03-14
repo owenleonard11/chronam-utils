@@ -2,26 +2,26 @@
 This repository contains modules for interacting with the [Chronicling America](https://chroniclingamerica.loc.gov/) database of historical newspapers, in support of an upcoming project on post-OCR correction and retrieval-augmented generation.
 
 ## Project Overview
-Generating Chronicling provides an alternative to the Chronicling America [advanced]() and [basic]() search interfaces. Its main advantages over the existing options are:
-- **Enhanced querying**. While the official search interfaces are limited to a single query at a time, Generating Chronicling can instead retrieve results for groups of related queries. This is useful if, for example, we want to retrieve 10 results each from multiple states across multiple years. `usage.py` shows examples of this feature.
+`chronam-utils` provides an alternative to the Chronicling America [advanced]() and [basic]() search interfaces. Its main advantages over the existing options are:
+- **Enhanced querying**. While the official search interfaces are limited to a single query at a time, `chronam-utils` can instead retrieve results for groups of related queries. This is useful if, for example, we want to retrieve 10 results each from multiple states across multiple years. `usage.py` shows examples of this feature.
 - **Procedural download**. Although Chronicling America provides batch downloads for OCR data, downloading and unzipping large archives is inefficient when we want a smaller sample that is distributed across multiple batches. The methods provided by the `ChronAmDownloader` class allow for arbitrary groups of resources to be downloaded without incurring additional overhead.
 - **Parallelization**. Both query retrieval and and file download are designed to be used with multithreading while still respecting rate limits.
 
 ## Quickstart Guide
-> **NOTE**: This guide assumes that you have git, [Python](https://www.python.org/) 3.9 or greater, and [pip](https://pypi.org/project/pip/) 21.0 or greater installed. Generating Chronicling may work with older versions of Python and pip, but has not been tested.
+> **NOTE**: This guide assumes that you have git, [Python](https://www.python.org/) 3.9 or greater, and [pip](https://pypi.org/project/pip/) 21.0 or greater installed. `chronam-utils` may work with older versions of Python and pip, but has not been tested.
 
-Start here to get up and running with the basics of Generating Chronicling. Once you've downloaded the code and installed the requirements, you can also follow along in the Jupyter notebook at `notebooks/quickstart.ipynb`.
+Start here to get up and running with the basics of `chronam-utils. Once you've downloaded the code and installed the requirements, you can also follow along in the Jupyter notebook at `notebooks/quickstart.ipynb`.
 
 ### Download & Installation
-To download the code, run the following from the directory in which you want Generating Chronicling to be installed:
+To download the code, run the following from the directory in which you want `chronam-utils` to be installed:
 ```
-git clone git@github.com:owenleonard11/generating-chronicling.git
+git clone git@github.com:owenleonard11/chronam-utils.git
 ```
-This should create a new folder called `generating-chronicling`. To continue with installation, switch into the new folder:
+This should create a new folder called `chronam-utils`. To continue with installation, switch into the new folder:
 ```
-cd generating-chronicling
+cd chronam-utils
 ```
-To manage the Python packages required to run Generating Chronicling, you'll want to create a new Python vitual environment:
+To manage the Python packages required to run `chronam-utils`, you'll want to create a new Python vitual environment:
 ```
 python -m venv env
 ```
@@ -58,7 +58,7 @@ pip install --force-reinstall --no-binary :all: pillow
 ```
 
 ### Getting Started
-To get started, create a new notebook in the `generating-chronicling` directory:
+To get started, create a new notebook in the `chronam-utils` directory:
 ```
 touch quickstart.ipynb
 ```
